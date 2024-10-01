@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -20,22 +21,36 @@ public class GameEngine {
 
     private final Map<String, Runnable> actionMap = new HashMap<>();
 
-    private GameEngine() {
+     GameEngine(String playerName) {
         // define a hash map to contain the links from the actions to the corresponding methods
-        actionMap.put("UP", this::moveUp);
-        actionMap.put("DOWN", this::moveDown);
-        actionMap.put("LEFT", this::moveLeft);
-        actionMap.put("RIGHT", this::moveRight);
-
+//        actionMap.put("UP", this::moveUp);
+//        actionMap.put("DOWN", this::moveDown);
+//        actionMap.put("LEFT", this::moveLeft);
+//        actionMap.put("RIGHT", this::moveRight);
+        this.playerName = playerName;
         // start the first round
         nextRound();
     }
-
-    public static GameEngine getInstance() {
-        if (instance == null)
-            instance = new GameEngine();
-        return instance;
+    public void reset() {
+        synchronized (board) {
+            for (int i = 0; i < board.length; i++) {
+                board[i] = 0;
+            }
+        }
+        this.score = 0;
+        this.level = 1;
+        this.combo = 0;
+        this.totalMoveCount = 0;
+        this.numOfTilesMoved = 0;
+        this.gameOver = false;
+        nextRound();
     }
+
+//    public static GameEngine getInstance() {
+//        if (instance == null)
+//            instance = new GameEngine();
+//        return instance;
+//    }
 
     /**
      * Generate a new random value and determine the game status.
@@ -55,6 +70,38 @@ public class GameEngine {
         return true;
     }
 
+
+    public String serializeState() {
+        StringBuilder sb = new StringBuilder();
+        synchronized (board) {
+            for (int value : board) {
+                sb.append(value).append(",");
+            }
+        }
+        sb.append("|").append(score).append("|").append(level);
+        return sb.toString();
+    }
+
+    public String getScores() {
+        // Implement a method to get scores, possibly from the database
+        // For simplicity, return a placeholder string
+        return "Player1:1000,Player2:800"; // Example format
+    }
+    public void setBoard(String[] boardValues) {
+        synchronized (board) {
+            for (int i = 0; i < board.length; i++) {
+                board[i] = Integer.parseInt(boardValues[i]);
+            }
+        }
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
     /**
      * @return true if all blocks are occupied.
      */
@@ -70,29 +117,42 @@ public class GameEngine {
      */
     public void moveMerge(String dir) {
         synchronized (board) {
-            if (actionMap.containsKey(dir)) {
-                combo = numOfTilesMoved = 0;
+            combo = numOfTilesMoved = 0;
 
-                // go to the hash map, find the corresponding method and call it
-                actionMap.get(dir).run();
+            // Determine the move direction
+            switch (dir.toUpperCase()) {
+                case "UP":
+                    moveUp();
+                    break;
+                case "DOWN":
+                    moveDown();
+                    break;
+                case "LEFT":
+                    moveLeft();
+                    break;
+                case "RIGHT":
+                    moveRight();
+                    break;
+                default:
+                    return; // Invalid direction
+            }
 
-                // calculate the new score
-                score += combo / 5 * 2;
+            // Calculate the new score
+            score += combo / 5 * 2;
 
-                // determine whether the game is over or not
-                if (numOfTilesMoved > 0) {
-                    totalMoveCount++;
-                    gameOver = level == LIMIT || !nextRound();
-                } else
-                    gameOver = isFull();
+            // Determine whether the game is over or not
+            if (numOfTilesMoved > 0) {
+                totalMoveCount++;
+                gameOver = level == LIMIT || !nextRound();
+            } else
+                gameOver = isFull();
 
-                // update the database if the game is over
-                if (gameOver) {
-                    try {
-                        Database.putScore(playerName, score, level);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
+            // Update the database if the game is over
+            if (gameOver) {
+                try {
+                    Database.putScore(playerName, score, level);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
         }
@@ -171,7 +231,9 @@ public class GameEngine {
             return board[r * SIZE + c];
         }
     }
-
+    public String getPlayerName() {
+        return playerName;
+    }
     public boolean isGameOver() {
         return gameOver;
     }

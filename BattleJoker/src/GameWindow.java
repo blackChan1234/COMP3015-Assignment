@@ -7,13 +7,16 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -45,15 +48,19 @@ public class GameWindow {
     Stage stage;
     AnimationTimer animationTimer;
 
-    final String imagePath = "images/";
     final String[] symbols = {"bg", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker"};
     final Image[] images = new Image[symbols.length];
-    final GameEngine gameEngine = GameEngine.getInstance();
+    final GameEngine gameEngine;
+    final String imagePath = "images/";
+    BattleJoker battleJoker; // Reference to the main client class
 
-    public GameWindow(Stage stage) throws IOException {
+    public GameWindow(Stage stage, BattleJoker battleJoker) throws IOException {
+        this.battleJoker = battleJoker;
+        gameEngine = new GameEngine("Player"); // Placeholder, will be set correctly
+
         loadImages();
 
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("mainUI.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/mainUI.fxml"));
         loader.setController(this);
         Parent root = loader.load();
         Scene scene = new Scene(root);
@@ -86,37 +93,22 @@ public class GameWindow {
 
     private void initCanvas() {
         canvas.setOnKeyPressed(event -> {
-            gameEngine.moveMerge(event.getCode().toString());
-            scoreLabel.setText("Score: " + gameEngine.getScore());
-            levelLabel.setText("Level: " + gameEngine.getLevel());
-            comboLabel.setText("Combo: " + gameEngine.getCombo());
-            moveCountLabel.setText("# of Moves: " + gameEngine.getMoveCount());
+            String move = event.getCode().toString();
+            // Send the move to the server via BattleJoker
+            battleJoker.sendMove(move);
         });
 
         animationTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 render();
-                if (gameEngine.isGameOver()) {
-                    System.out.println("Game Over!");
-                    animationTimer.stop();
-
-                    Platform.runLater(() -> {
-                        try {
-                            new ScoreboardWindow();
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex);
-                        }
-                    });
-
-                }
+                // Game over is handled via server messages
             }
         };
         canvas.requestFocus();
     }
 
     private void render() {
-
         double w = canvas.getWidth();
         double h = canvas.getHeight();
 
@@ -150,6 +142,73 @@ public class GameWindow {
         }
     }
 
+    public void updateGameState(String state) {
+        // Parse the state string and update the game board
+        // State format: board_values|score|level
+        String[] parts = state.split("\\|");
+        String[] boardValues = parts[0].split(",");
+        int score = Integer.parseInt(parts[1]);
+        int level = Integer.parseInt(parts[2]);
+
+        // Update GameEngine state
+        Platform.runLater(() -> {
+            gameEngine.setBoard(boardValues);
+            gameEngine.setScore(score);
+            gameEngine.setLevel(level);
+            render();
+            updateLabels();
+        });
+    }
+
+    private void updateLabels() {
+        scoreLabel.setText("Score: " + gameEngine.getScore());
+        levelLabel.setText("Level: " + gameEngine.getLevel());
+        // Update other labels if necessary
+    }
+
+    public void displayGameOver(String scores) {
+        Platform.runLater(() -> {
+            // Display game over dialog with scores
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Game Over");
+            alert.setHeaderText("Final Scores");
+            alert.setContentText(scores);
+            alert.showAndWait();
+
+            // Optionally, reset the game or close the application
+            // For example, you can reset the game state:
+            resetGame();
+        });
+    }
+
+    private void resetGame() {
+        gameEngine.reset(); // Implement a reset method in GameEngine
+        updateLabels();
+        render();
+    }
+
+    public void notifyPlayerJoined(String name) {
+        Platform.runLater(() -> {
+            // Display a notification that a new player has joined
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Player Joined");
+            alert.setHeaderText(null);
+            alert.setContentText(name + " has joined the game.");
+            alert.showAndWait();
+        });
+    }
+
+    public void notifyPlayerLeft(String name) {
+        Platform.runLater(() -> {
+            // Display a notification that a player has left
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Player Left");
+            alert.setHeaderText(null);
+            alert.setContentText(name + " has left the game.");
+            alert.showAndWait();
+        });
+    }
+
     void onWidthChangedWindow(double w) {
         double width = w - boardPane.getBoundsInParent().getMinX();
         boardPane.setMinWidth(width);
@@ -167,7 +226,7 @@ public class GameWindow {
     void quit() {
         System.out.println("Bye bye");
         stage.close();
-        System.exit(0);
+        Platform.exit();
     }
 
     public void setName(String name) {

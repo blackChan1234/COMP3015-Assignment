@@ -1,40 +1,112 @@
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.net.Socket;
 import java.sql.SQLException;
 
 public class BattleJoker extends Application {
-Socket clientSocket;
+    Socket clientSocket;
+    private PrintWriter out;
+    private BufferedReader in;
+    private GameWindow gameWindow;
+    private String playerName;
+
     @Override
     public void start(Stage primaryStage) {
         try {
             GetNameDialog dialog = new GetNameDialog();
-            GameWindow win = new GameWindow(primaryStage);
-            win.setName(dialog.getPlayername());
-            clientSocket = new Socket("127.0.0.1",12345);
+            playerName = dialog.getPlayername();
+            gameWindow = new GameWindow(primaryStage, this); // Pass reference to BattleJoker
+
+            gameWindow.setName(playerName);
+
+            ServerConnectionDialog serverDialog = new ServerConnectionDialog();
+            String serverIP = serverDialog.getServerIP();
+            int serverPort = serverDialog.getServerPort();
+
+            // Connect to server
+            try {
+                clientSocket = new Socket(serverIP, serverPort);
+            } catch (IOException e) {
+                showErrorAndExit("Unable to connect to the server. Please ensure the server is running and the IP/Port are correct.");
+                return;
+            }
+
+            out = new PrintWriter(clientSocket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            // Send player name to server
+            out.println(playerName);
+
+            // Start a thread to listen for server messages
+            new Thread(new ServerListener()).start();
+
             Database.connect();
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            ex.printStackTrace();
+            showErrorAndExit("An unexpected error occurred: " + ex.getMessage());
         }
+    }
+
+    private void showErrorAndExit(String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+            Platform.exit();
+        });
     }
 
     @Override
     public void stop() {
         try {
             Database.disconnect();
-        } catch (SQLException ignored) {
+            if (clientSocket != null && !clientSocket.isClosed()) {
+                clientSocket.close();
+            }
+        } catch (SQLException | IOException ignored) {}
+    }
+
+    public void sendMove(String move) {
+        out.println("MOVE:" + move);
+    }
+
+    private class ServerListener implements Runnable {
+        @Override
+        public void run() {
+            try {
+                String message;
+                while ((message = in.readLine()) != null) {
+                    if (message.startsWith("GAME_STATE:")) {
+                        String state = message.substring(11);
+                        gameWindow.updateGameState(state);
+                    } else if (message.startsWith("GAME_OVER:")) {
+                        String scores = message.substring(10);
+                        gameWindow.displayGameOver(scores);
+                    } else if (message.startsWith("PLAYER_JOINED:")) {
+                        String name = message.substring(14);
+                        gameWindow.notifyPlayerJoined(name);
+                    } else if (message.startsWith("PLAYER_LEFT:")) {
+                        String name = message.substring(12);
+                        gameWindow.notifyPlayerLeft(name);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                showErrorAndExit("Disconnected from server.");
+            }
         }
     }
 
     public static void main(String[] args) {
-        System.setErr(new FilteredStream(System.err));  // All JavaFX'es version warnings will not be displayed
-
+        System.setErr(new FilteredStream(System.err));  // Suppress specific warnings
         launch();
     }
-
 }
 
 class FilteredStream extends PrintStream {
@@ -55,4 +127,3 @@ class FilteredStream extends PrintStream {
             super.print(x);
     }
 }
-
