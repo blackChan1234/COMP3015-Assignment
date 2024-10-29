@@ -4,6 +4,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.text.Font;
@@ -13,11 +14,22 @@ import java.io.IOException;
 
 public class ScoreboardWindow {
     Stage stage;
+    @FXML
+    private Button top10Button;
 
     @FXML
+    private Button waitNewGameButton;
+    @FXML
     ListView<String> scoreList;
-
+    private ObservableList<String> gameOverItems;
+    private ObservableList<String> top10Items;
+    private String title;
     public ScoreboardWindow() throws IOException {
+        this(null, "Score Board");
+    }
+
+    // New constructor to accept custom data and title
+    public ScoreboardWindow(ObservableList<String> items, String title) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("scoreUI.fxml"));
         loader.setController(this);
         Parent root = loader.load();
@@ -25,16 +37,42 @@ public class ScoreboardWindow {
 
         stage = new Stage();
         stage.setScene(scene);
-        stage.setTitle("Battle Joker");
+        stage.setTitle(title);
         stage.setMinWidth(scene.getWidth());
         stage.setMinHeight(scene.getHeight());
 
         setFont(14);
-        updateList();
 
-        stage.showAndWait();
+        if (items != null) {
+            scoreList.setItems(items);
+        } else {
+            updateList();
+        }
+
+        //stage.showAndWait();
     }
-
+    public void show() {
+        stage.show();
+    }
+    @FXML
+    private void handleTop10Button() {
+        // Request top 10 scores from the server
+        try {
+            GameEngine.getInstance().requestTopScores();
+            // Disable the Top 10 button until the data is received
+            top10Button.setDisable(true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    @FXML
+    private void handleWaitNewGameButton() {
+        // Logic to wait for a new game
+        // This could be as simple as closing the scoreboard window
+        // and resetting the game state in GameEngine
+        stage.close();
+        //GameEngine.getInstance().waitForNewGame();
+    }
     private void setFont(int fontSize) {
         scoreList.setCellFactory(param -> {
             TextFieldListCell<String> cell = new TextFieldListCell<>();

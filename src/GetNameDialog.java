@@ -16,7 +16,13 @@ public class GetNameDialog {
 
     @FXML
     Button goButton;
+    @FXML
+    TextField ipField;
 
+    @FXML
+    TextField portField;
+    String serverIP;
+    int serverPort;
     Stage stage;
     String playername;
 
@@ -40,11 +46,31 @@ public class GetNameDialog {
     @FXML
     void OnButtonClick(Event event) {
         playername = nameField.getText().trim();
-        if (playername.length() > 0)
-            stage.close();
+        serverIP = ipField.getText().trim();
+        String portText = portField.getText().trim();
+        if (playername.length() > 0 && serverIP.length() > 0 && portText.length() > 0) {
+            try {
+                serverPort = Integer.parseInt(portText);
+                stage.close();
+            } catch (NumberFormatException e) {
+
+                System.out.println("Please input a valid port");
+            }
+        } else {
+
+            System.out.println("Please input all fields");
+        }
     }
 
     public String getPlayername() {
         return playername;
+    }
+
+    public String getServerIP() {
+        return serverIP;
+    }
+
+    public int getServerPort() {
+        return serverPort;
     }
 }

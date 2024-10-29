@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<?import javafx.scene.control.ListView?>
+<VBox prefHeight="894.0" prefWidth="748.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1">
+    <MenuBar fx:id="menuBar" VBox.vgrow="NEVER">
+        <Menu mnemonicParsing="false" text="Game">
+        </Menu>
+        <Menu mnemonicParsing="false" text="Help">
+            <MenuItem fx:id="mnuAbout" mnemonicParsing="false" text="About..." />
+        </Menu>
+    </MenuBar>
+    <HBox style="-fx-background-color: #a88;">
+        <VBox>
+            <Label fx:id="nameLabel" text="Name" textAlignment="CENTER">
+            <font>
+               <Font name="Impact" size="20.0" />
+            </font></Label>
+            <Label fx:id="scoreLabel" textAlignment="CENTER">Score: 0</Label>
+            <Label fx:id="levelLabel" textAlignment="CENTER">Level: 0</Label>
+            <Label fx:id="comboLabel" textAlignment="CENTER">Combo: 0</Label>
+            <Label fx:id="moveCountLabel" textAlignment="CENTER"># of Moves: 0</Label>
+         <padding>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </padding>
+        </VBox>
+        <VBox fx:id="player1Box" visible="false">
+            <Label fx:id="player1NameLabel" text="Name" textAlignment="CENTER">
+                <font>
+                    <Font name="Impact" size="20.0" />
+                </font>
+            </Label>
+            <Label fx:id="player1ScoreLabel" textAlignment="CENTER">Score: 0</Label>
+            <Label fx:id="player1LevelLabel" textAlignment="CENTER">Level: 0</Label>
+            <Label fx:id="player1ComboLabel" textAlignment="CENTER">Combo: 0</Label>
+            <Label fx:id="player1MoveCountLabel" textAlignment="CENTER"># of Moves: 0</Label>
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+            </padding>
+        </VBox>
+
+        <VBox fx:id="player2Box" visible="false">
+            <Label fx:id="player2NameLabel" text="Name" textAlignment="CENTER">
+                <font>
+                    <Font name="Impact" size="20.0" />
+                </font>
+            </Label>
+            <Label fx:id="player2ScoreLabel" textAlignment="CENTER">Score: 0</Label>
+            <Label fx:id="player2LevelLabel" textAlignment="CENTER">Level: 0</Label>
+            <Label fx:id="player2ComboLabel" textAlignment="CENTER">Combo: 0</Label>
+            <Label fx:id="player2MoveCountLabel" textAlignment="CENTER"># of Moves: 0</Label>
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+            </padding>
+        </VBox>
+
+        <VBox fx:id="player3Box" visible="false">
+            <Label fx:id="player3NameLabel" text="Name" textAlignment="CENTER">
+                <font>
+                    <Font name="Impact" size="20.0" />
+                </font>
+            </Label>
+            <Label fx:id="player3ScoreLabel" textAlignment="CENTER">Score: 0</Label>
+            <Label fx:id="player3LevelLabel" textAlignment="CENTER">Level: 0</Label>
+            <Label fx:id="player3ComboLabel" textAlignment="CENTER">Combo: 0</Label>
+            <Label fx:id="player3MoveCountLabel" textAlignment="CENTER"># of Moves: 0</Label>
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+            </padding>
+        </VBox>
+    </HBox>
+    <BorderPane fx:id="boardPane">
+        <center>
+            <Pane style="-fx-background-color: #a88;" BorderPane.alignment="CENTER">
+                <Canvas fx:id="canvas" />
+            </Pane>
+        </center>
+    </BorderPane>
+
+</VBox>

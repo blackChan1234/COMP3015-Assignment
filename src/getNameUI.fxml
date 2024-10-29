@@ -12,6 +12,16 @@
             <Font size="17.0"/>
         </font>
     </TextField>
+    <TextField fx:id="ipField" alignment="CENTER" maxWidth="200" minWidth="200" promptText="Server IP">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </TextField>
+    <TextField fx:id="portField" alignment="CENTER" maxWidth="200" minWidth="200" promptText="server port">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </TextField>
     <Button fx:id="goButton" text="GO!">
         <font>
             <Font size="15.0"/>

@@ -8,32 +8,10 @@ public class Database {
 
     public static void connect() throws SQLException, ClassNotFoundException {
         if (conn == null) {
+//            Class.forName("org.sqlite.JDBC");
             conn = DriverManager.getConnection(url);
-            initialize();
         }
-    }
-    public static void putScore(String name, int score, int level) {
-        String sql = "INSERT INTO scores (name, score, level, time) VALUES (?, ?, ?, datetime('now'))";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, name);
-            pstmt.setInt(2, score);
-            pstmt.setInt(3, level);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
 
-    public static void initialize() throws SQLException {
-        String createTableSQL = "CREATE TABLE IF NOT EXISTS scores (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "name TEXT NOT NULL," +
-                "score INTEGER NOT NULL," +
-                "level INTEGER NOT NULL," +
-                "time DATETIME DEFAULT CURRENT_TIMESTAMP" +
-                ");";
-        Statement stmt = conn.createStatement();
-        stmt.execute(createTableSQL);
     }
 
     public static void disconnect() throws SQLException {
@@ -57,7 +35,11 @@ public class Database {
         return data;
     }
 
-
+    public static void putScore(String name, int score, int level) throws SQLException {
+        String sql = String.format("INSERT INTO scores ('name', 'score', 'level', 'time') VALUES ('%s', %d, %d, datetime('now'))", name, score, level);
+        Statement statement = conn.createStatement();
+        statement.execute(sql);
+    }
 
     public static void main(String[] args) throws SQLException, ClassNotFoundException {
         connect();

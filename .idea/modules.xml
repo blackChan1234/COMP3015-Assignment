@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/COMP3015-Assignment.iml" filepath="$PROJECT_DIR$/COMP3015-Assignment.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BattleJoker.iml" filepath="$PROJECT_DIR$/BattleJoker.iml" />
     </modules>
   </component>
 </project>
