@@ -3,7 +3,6 @@ import javafx.stage.Stage;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.net.Socket;
 import java.sql.SQLException;
 
 public class BattleJoker extends Application {
@@ -13,11 +12,18 @@ public class BattleJoker extends Application {
 
         try {
             GetNameDialog dialog = new GetNameDialog();
-            GameWindow win = new GameWindow(primaryStage);
-            win.setName(dialog.getPlayername());
 
-            Database.connect();
-            GameEngine.getInstance().connectToServer(dialog.getServerIP(), dialog.getServerPort(), dialog.getPlayername());
+            String playerName = dialog.getPlayername();
+            String serverIP = dialog.getServerIP();
+            int serverPort = dialog.getServerPort();
+            GameWindow gameWindow = new GameWindow(primaryStage);
+            gameWindow.setName(playerName);
+// Set GameWindow in GameEngine
+            GameEngine.getInstance().setGameWindow(gameWindow);
+
+            // Connect to server
+            GameEngine.getInstance().connectToServer(serverIP, serverPort, playerName);
+
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -25,11 +31,10 @@ public class BattleJoker extends Application {
 
     @Override
     public void stop() {
-        try {
-            Database.disconnect();
-        } catch (SQLException ignored) {
-        }
+        GameEngine.getInstance().stop();
+
     }
+
 
     public static void main(String[] args) {
         System.setErr(new FilteredStream(System.err));  // All JavaFX'es version warnings will not be displayed

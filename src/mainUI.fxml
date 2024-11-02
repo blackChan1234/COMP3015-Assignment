@@ -34,7 +34,13 @@
          <padding>
             <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
          </padding>
+            <Label fx:id="turnIndicatorLabel" text="Waiting..." textAlignment="CENTER">
+                <font>
+                    <Font size="18.0" />
+                </font>
+            </Label>
         </VBox>
+
         <VBox fx:id="player1Box" visible="false">
             <Label fx:id="player1NameLabel" text="Name" textAlignment="CENTER">
                 <font>

@@ -3,22 +3,16 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -26,8 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
-
-import static java.lang.System.out;
+import java.util.Optional;
 
 public class GameWindow {
     @FXML
@@ -85,8 +78,6 @@ public class GameWindow {
     @FXML
     Label player3MoveCountLabel;
     @FXML
-    ListView<String> otherPlayersList;
-    @FXML
     Label moveCountLabel;
 
     @FXML
@@ -95,14 +86,17 @@ public class GameWindow {
     @FXML
     Canvas canvas;
 
+    @FXML
+    Label turnIndicatorLabel; // 新增的回合指示器
+
     Stage stage;
     AnimationTimer animationTimer;
 
     final String imagePath = "images/";
     static final String[] symbols = {"bg", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker"};
     static final Image[] images = new Image[symbols.length];
-    final GameEngine gameEngine = GameEngine.getInstance();
-    private ObservableList<String> otherPlayersData = FXCollections.observableArrayList();
+    static final GameEngine gameEngine = GameEngine.getInstance();
+
     public GameWindow(Stage stage) throws IOException {
         loadImages();
 
@@ -118,33 +112,30 @@ public class GameWindow {
         stage.setMinWidth(scene.getWidth());
         stage.setMinHeight(scene.getHeight());
 
-
-
         stage.widthProperty().addListener(w -> onWidthChangedWindow(((ReadOnlyDoubleProperty) w).getValue()));
         stage.heightProperty().addListener(h -> onHeightChangedWindow(((ReadOnlyDoubleProperty) h).getValue()));
         stage.setOnCloseRequest(event -> quit());
-        //mnuTopScores.setOnAction(event -> requestTopScores());
 
         stage.show();
         initCanvas();
-        GameEngine.getInstance().setGameWindow(this);
-        gameStart();
     }
-    private void requestTopScores() {
-        try {
-            GameEngine.getInstance().requestTopScores();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+    public void showGameStart() {
+        Platform.runLater(() -> {
+            gameStart();
+            // 可以在这里显示游戏开始的提示
+        });
     }
+
     private void gameStart() {
         animationTimer.start();
     }
+
     public void updateOtherPlayersData(List<PlayerInfo> players) {
         Platform.runLater(() -> {
             String localPlayerName = nameLabel.getText();
 
-            // hide other player VBOX
+            // 隐藏其他玩家的 VBox
             player1Box.setVisible(false);
             player2Box.setVisible(false);
             player3Box.setVisible(false);
@@ -158,28 +149,22 @@ public class GameWindow {
                     comboLabel.setText("Combo: " + player.getCombo());
                     moveCountLabel.setText("# of Moves: " + player.getMoves());
                 } else {
-                    // 更新其他玩家的信息
-                    if (index == 0) {
-                        player1Box.setVisible(true);
-                        player1NameLabel.setText(player.getName());
-                        player1ScoreLabel.setText("Score: " + player.getScore());
-                        player1LevelLabel.setText("Level: " + player.getLevel());
-                        player1ComboLabel.setText("Combo: " + player.getCombo());
-                        player1MoveCountLabel.setText("# of Moves: " + player.getMoves());
-                    } else if (index == 1) {
-                        player2Box.setVisible(true);
-                        player2NameLabel.setText(player.getName());
-                        player2ScoreLabel.setText("Score: " + player.getScore());
-                        player2LevelLabel.setText("Level: " + player.getLevel());
-                        player2ComboLabel.setText("Combo: " + player.getCombo());
-                        player2MoveCountLabel.setText("# of Moves: " + player.getMoves());
-                    } else if (index == 2) {
-                        player3Box.setVisible(true);
-                        player3NameLabel.setText(player.getName());
-                        player3ScoreLabel.setText("Score: " + player.getScore());
-                        player3LevelLabel.setText("Level: " + player.getLevel());
-                        player3ComboLabel.setText("Combo: " + player.getCombo());
-                        player3MoveCountLabel.setText("# of Moves: " + player.getMoves());
+                    switch (index) {
+                        case 0:
+                            updatePlayerBox(player1Box, player1NameLabel, player1ScoreLabel, player1LevelLabel,
+                                    player1ComboLabel, player1MoveCountLabel, player);
+                            break;
+                        case 1:
+                            updatePlayerBox(player2Box, player2NameLabel, player2ScoreLabel, player2LevelLabel,
+                                    player2ComboLabel, player2MoveCountLabel, player);
+                            break;
+                        case 2:
+                            updatePlayerBox(player3Box, player3NameLabel, player3ScoreLabel, player3LevelLabel,
+                                    player3ComboLabel, player3MoveCountLabel, player);
+                            break;
+                        default:
+                            // 处理更多玩家
+                            break;
                     }
                     index++;
                 }
@@ -187,7 +172,15 @@ public class GameWindow {
         });
     }
 
-
+    private void updatePlayerBox(VBox playerBox, Label nameLabel, Label scoreLabel, Label levelLabel,
+                                 Label comboLabel, Label moveCountLabel, PlayerInfo player) {
+        playerBox.setVisible(true);
+        nameLabel.setText(player.getName());
+        scoreLabel.setText("Score: " + player.getScore());
+        levelLabel.setText("Level: " + player.getLevel());
+        comboLabel.setText("Combo: " + player.getCombo());
+        moveCountLabel.setText("# of Moves: " + player.getMoves());
+    }
 
     private void loadImages() throws IOException {
         for (int i = 0; i < symbols.length; i++)
@@ -198,10 +191,6 @@ public class GameWindow {
         canvas.setOnKeyPressed(event -> {
             try {
                 gameEngine.moveMerge(event.getCode().toString());
-//                scoreLabel.setText("Score: " + gameEngine.getScore());
-//                levelLabel.setText("Level: " + gameEngine.getLevel());
-//                comboLabel.setText("Combo: " + gameEngine.getCombo());
-//                moveCountLabel.setText("# of Moves: " + gameEngine.getMoveCount());
             } catch (IOException ex) {
                 ex.printStackTrace();
                 System.exit(-1);
@@ -212,35 +201,26 @@ public class GameWindow {
             @Override
             public void handle(long now) {
                 render();
-//                if (gameEngine.isGameOver()) {
-//                    System.out.println("Game Over!");
-//                    animationTimer.stop();
-//
-//                    Platform.runLater(() -> {
-//                        try {
-//                            new ScoreboardWindow();
-//                        } catch (IOException ex) {
-//                            throw new RuntimeException(ex);
-//                        }
-//                    });
-//
-//                }
             }
         };
+        canvas.setFocusTraversable(true);
+        canvas.setDisable(true); // 初始时禁用输入
         canvas.requestFocus();
     }
+
     public void displayGameOverScores(List<PlayerInfo> scores) {
         Platform.runLater(() -> {
             try {
                 // Convert PlayerInfo list to a suitable format for ScoreboardWindow
                 ObservableList<String> items = FXCollections.observableArrayList();
                 for (PlayerInfo player : scores) {
-                    String scoreStr = String.format("%s (%d)", player.getScore(), player.getLevel());
-                    items.add(String.format("%10s | %10s", player.getName(), scoreStr));
+                    String scoreStr = String.format("%-10s | Score: %-5d | Level: %-3d",
+                            player.getName(), player.getScore(), player.getLevel());
+                    items.add(scoreStr);
                 }
 
                 // Create a new ScoreboardWindow instance with custom data
-                new ScoreboardWindow(items, "Game Over Scores");
+                new ScoreboardWindow(items, "Game Over Scores").show();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -258,7 +238,7 @@ public class GameWindow {
                 }
 
                 // Create a new ScoreboardWindow instance with custom data
-                new ScoreboardWindow(items, "Top 10 Scores");
+                new ScoreboardWindow(items, "Top 10 Scores").show();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -266,7 +246,6 @@ public class GameWindow {
     }
 
     private void render() {
-
         double w = canvas.getWidth();
         double h = canvas.getHeight();
 
@@ -315,13 +294,84 @@ public class GameWindow {
     }
 
     void quit() {
-        out.println("Bye bye");
+        System.out.println("Bye bye");
         stage.close();
         System.exit(0);
     }
 
     public void setName(String name) {
         nameLabel.setText(name);
-//        gameEngine.setPlayerName(name);
     }
+
+    public void updateCurrentPlayer(String currentPlayerName) {
+        Platform.runLater(() -> {
+            if (currentPlayerName.equals(nameLabel.getText())) {
+                turnIndicatorLabel.setText("Your Turn");
+                canvas.setDisable(false);
+                canvas.requestFocus();
+            } else {
+                turnIndicatorLabel.setText("Waiting for " + currentPlayerName);
+                canvas.setDisable(true);
+            }
+        });
+    }
+//    public void promptStartGame() {
+//        Platform.runLater(() -> {
+//            // 显示对话框，询问玩家是否立即开始游戏
+//            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+//            alert.setTitle("Start Game");
+//            alert.setHeaderText("Do you want to start the game now?");
+//            alert.setContentText("Click OK to start the game, or Cancel to wait for more players.");
+//
+//            Optional<ButtonType> result = alert.showAndWait();
+//            try {
+//                if (result.isPresent() && result.get() == ButtonType.OK) {
+//                    // 发送开始游戏的指令
+//                    gameEngine.sendStartGameCommand();
+//                } else {
+//                    // 发送等待的指令
+//                    gameEngine.sendWaitCommand();
+//                }
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        });
+  //  }
+
+    public void showMessage(String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Message");
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
+    }
+
+    public void showLobby() {
+        Platform.runLater(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("lobby.fxml")); // Adjust path
+                // No need to set controller here if it's set in FXML
+                Parent root = loader.load();
+
+                LobbyController lobbyController = loader.getController();
+                GameEngine.getInstance().setLobbyController(lobbyController);
+
+                Stage lobbyStage = new Stage();
+                lobbyStage.setTitle("Game Lobby");
+                lobbyStage.setScene(new Scene(root));
+                lobbyStage.show();
+
+
+                lobbyController.setLobbyStage(lobbyStage);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+
+
 }
