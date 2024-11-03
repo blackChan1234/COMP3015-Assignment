@@ -315,28 +315,6 @@ public class GameWindow {
             }
         });
     }
-//    public void promptStartGame() {
-//        Platform.runLater(() -> {
-//            // 显示对话框，询问玩家是否立即开始游戏
-//            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-//            alert.setTitle("Start Game");
-//            alert.setHeaderText("Do you want to start the game now?");
-//            alert.setContentText("Click OK to start the game, or Cancel to wait for more players.");
-//
-//            Optional<ButtonType> result = alert.showAndWait();
-//            try {
-//                if (result.isPresent() && result.get() == ButtonType.OK) {
-//                    // 发送开始游戏的指令
-//                    gameEngine.sendStartGameCommand();
-//                } else {
-//                    // 发送等待的指令
-//                    gameEngine.sendWaitCommand();
-//                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        });
-  //  }
 
     public void showMessage(String message) {
         Platform.runLater(() -> {
@@ -351,26 +329,32 @@ public class GameWindow {
     public void showLobby() {
         Platform.runLater(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("lobby.fxml")); // Adjust path
-                // No need to set controller here if it's set in FXML
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("lobby.fxml"));
                 Parent root = loader.load();
 
                 LobbyController lobbyController = loader.getController();
-                GameEngine.getInstance().setLobbyController(lobbyController);
 
                 Stage lobbyStage = new Stage();
                 lobbyStage.setTitle("Game Lobby");
                 lobbyStage.setScene(new Scene(root));
+
+                // 设置 lobbyStage
+                lobbyController.setLobbyStage(lobbyStage);
+
+                // 设置 LobbyController 到 GameEngine
+                GameEngine.getInstance().setLobbyController(lobbyController);
+
                 lobbyStage.show();
 
-
-                lobbyController.setLobbyStage(lobbyStage);
+                // 通知 GameEngine，lobby 已经准备好，可以启动 receiverThread
+                GameEngine.getInstance().startReceiverThread();
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
     }
+
 
 
 

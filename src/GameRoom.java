@@ -147,6 +147,7 @@ public class GameRoom {
             try {
                 out.writeByte('G'); // 'G' 表示游戏开始
                 out.flush();
+                sendGameStateToAll();
                 System.out.println("Notifying all players that the game has started.");
             } catch (IOException e) {
                 e.printStackTrace();

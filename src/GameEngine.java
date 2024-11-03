@@ -33,6 +33,7 @@ public class GameEngine {
     }
 
     private boolean isFirstPlayer = false;
+
     public void connectToServer(String serverIP, int serverPort, String playerName) {
         this.playerName = playerName;
         try {
@@ -46,81 +47,86 @@ public class GameEngine {
             if (gameWindow != null) {
                 gameWindow.showLobby();
             }
-            receiverThread = new Thread(() -> {
-                try {
-                    while (true) {
-                        byte data = in.readByte();
-                        System.out.println("Client: Received data: " + (char)data);
-                        switch (data) {
-                            case 'L':
-                                // 接收玩家列表更新
-                                List<String> playerslist = receivePlayerList(in);
-                                playerList = playerslist;
-                                if (lobbyController != null) {
-                                    lobbyController.updatePlayerList(playerslist);
-                                }
-                                break;
-                            case 'F':
-                                // Server notifies whether the player is the first player
-                                isFirstPlayer = in.readBoolean();
-                                if (lobbyController != null) {
-                                    lobbyController.setFirstPlayer(isFirstPlayer);
-                                }
-                                break;
-                            case 'A':
-                                // Download array
-                                receiveArray(in);
-                                break;
-                            case 'P':
-                                // Receive other player data
-                                List<PlayerInfo> players = receivePlayersInfo(in);
-                                // Update window
-                                gameWindow.updateOtherPlayersData(players);
-                                break;
-                            case 'S':
-                                System.out.println("Client: Received game over scores.");
-                                List<PlayerInfo> gameOverScores = receiveGameOverScores(in);
-                                gameOver = true; // Set game over flag
-                                Platform.runLater(() -> gameWindow.displayGameOverScores(gameOverScores));
-                                break;
-                            case 'T':
-                                System.out.println("Client: Received top scores.");
-                                List<HashMap<String, String>> topScores = receiveTopScores(in);
-                                Platform.runLater(() -> gameWindow.displayTopScores(topScores));
-                                break;
-                            case 'N':
-                                String currentPlayerName = in.readUTF();
-                                System.out.println("Client: Current player is " + currentPlayerName);
-                                updateCurrentPlayer(currentPlayerName);
-                                break;
-                            case 'G':
-                                // Game start notification
-                                if (lobbyController != null) {
-                                    lobbyController.hideLobby();
-                                }
-                                Platform.runLater(() -> gameWindow.showGameStart());
-                                break;
-                            case 'M':
-                                // 消息提示
-                                String message = in.readUTF();
-                                Platform.runLater(() -> gameWindow.showMessage(message));
-                                break;
-                            default:
-                                // Print the direction
-                                System.out.println("Unknown data: " + (char)data);
-                        }
-                    }
-                } catch (IOException ex) {
-                    ex.printStackTrace(); // For debugging only
-                }
-            });
-
-            receiverThread.start();
         } catch (IOException ex) {
             ex.printStackTrace();
             System.exit(-1);
         }
     }
+
+    public void startReceiverThread() {
+        receiverThread = new Thread(() -> {
+            try {
+                while (true) {
+                    byte data = in.readByte();
+                    System.out.println("Client: Received data: " + (char)data);
+                    switch (data) {
+                        case 'L':
+                            // 接收玩家列表更新
+                            List<String> playerslist = receivePlayerList(in);
+                            playerList = playerslist;
+                            System.out.println(playerList);
+                            System.out.println(lobbyController);
+                            if (lobbyController != null) {
+                                lobbyController.updatePlayerList(playerslist);
+                            }
+                            break;
+                        case 'F':
+                            // Server notifies whether the player is the first player
+                            isFirstPlayer = in.readBoolean();
+                            if (lobbyController != null) {
+                                lobbyController.setFirstPlayer(isFirstPlayer);
+                            }
+                            break;
+                        case 'A':
+                            // Download array
+                            receiveArray(in);
+                            break;
+                        case 'P':
+                            // Receive other player data
+                            List<PlayerInfo> players = receivePlayersInfo(in);
+                            // Update window
+                            gameWindow.updateOtherPlayersData(players);
+                            break;
+                        case 'S':
+                            System.out.println("Client: Received game over scores.");
+                            List<PlayerInfo> gameOverScores = receiveGameOverScores(in);
+                            gameOver = true; // Set game over flag
+                            Platform.runLater(() -> gameWindow.displayGameOverScores(gameOverScores));
+                            break;
+                        case 'T':
+                            System.out.println("Client: Received top scores.");
+                            List<HashMap<String, String>> topScores = receiveTopScores(in);
+                            Platform.runLater(() -> gameWindow.displayTopScores(topScores));
+                            break;
+                        case 'N':
+                            String currentPlayerName = in.readUTF();
+                            System.out.println("Client: Current player is " + currentPlayerName);
+                            updateCurrentPlayer(currentPlayerName);
+                            break;
+                        case 'G':
+                            // Game start notification
+                            if (lobbyController != null) {
+                                lobbyController.hideLobby();
+                            }
+                            Platform.runLater(() -> gameWindow.showGameStart());
+                            break;
+                        case 'M':
+                            // 消息提示
+                            String message = in.readUTF();
+                            Platform.runLater(() -> gameWindow.showMessage(message));
+                            break;
+                        default:
+                            // Print the direction
+                            System.out.println("Unknown data: " + (char)data);
+                    }
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace(); // For debugging only
+            }
+        });
+        receiverThread.start();
+    }
+
     private List<String> receivePlayerList(DataInputStream in) throws IOException {
         int numPlayers = in.readInt();
         List<String> players = new ArrayList<>();
