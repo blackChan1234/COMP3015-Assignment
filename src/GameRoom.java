@@ -1,5 +1,4 @@
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.*;
@@ -185,21 +184,23 @@ public class GameRoom {
         }
     }
 
-    // 处理客户端发送的数据
-    public void handleClientData(char data, Socket clientSocket) throws SQLException {
+    public void handleClientData(char data, Socket clientSocket, DataInputStream in) throws SQLException {
         if (!gameStarted) {
             if (data == 'S' && isFirstPlayer(clientSocket)) {
                 startGame(clientSocket);
+            } else if (data == 'U') {
+                // Allow uploading puzzle before game starts
+                receivePuzzleData(clientSocket, in);
             } else {
-                // 可以添加其他消息的处理或忽略
                 System.out.println("Received unexpected data before game started: " + data);
             }
         } else {
-            // 游戏进行中的指令处理
             if (actionMap.containsKey(String.valueOf(data))) {
                 moveMerge(String.valueOf(data), clientSocket);
-                // 更新玩家数据并发送游戏状态
                 updatePlayerDataAndBroadcast(clientSocket);
+            } else if (data == 'U') {
+                // Handle upload puzzle data
+                receivePuzzleData(clientSocket, in);
             } else {
                 System.out.println("Unknown command during game: " + data);
             }
@@ -207,6 +208,93 @@ public class GameRoom {
     }
 
 
+
+    private void receivePuzzleData(Socket clientSocket, DataInputStream in) {
+        try {
+            int length = in.readInt();
+            System.out.println("Server: Receiving puzzle data of length " + length);
+
+            int[] newBoard = new int[length];
+            for (int i = 0; i < length; i++) {
+                newBoard[i] = in.readInt();
+            }
+
+            // Validate the received board data
+            if (validateBoardData(newBoard)) {
+                // Update the game board
+                synchronized (board) {
+                    System.arraycopy(newBoard, 0, board, 0, board.length);
+                }
+
+                // Optionally reset game state variables
+                resetGameState();
+
+                // Broadcast the updated board to all clients
+                sendGameStateToAll();
+
+                // Notify all players about the new puzzle
+                broadcastMessage("Puzzle updated by " + playerInfoMap.get(clientSocket).getName());
+
+                System.out.println("Puzzle data uploaded by player " + playerInfoMap.get(clientSocket).getName());
+            } else {
+                // Send an error message to the client
+                DataOutputStream out = clientOutputMap.get(clientSocket);
+                out.writeByte('M'); // 'M' indicates message
+                out.writeUTF("Invalid puzzle data uploaded.");
+                out.flush();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            try {
+                DataOutputStream out = clientOutputMap.get(clientSocket);
+                out.writeByte('M');
+                out.writeUTF("Error processing uploaded puzzle data.");
+                out.flush();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    private boolean validateBoardData(int[] boardData) {
+        if (boardData.length != SIZE * SIZE) {
+            return false;
+        }
+        for (int value : boardData) {
+            if (value < 0 || value >= LIMIT) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void resetGameState() {
+        combo = 0;
+        numOfTilesMoved = 0;
+        totalMoveCount = 0;
+        gameOver = false;
+        level = 1;
+        score = 0;
+        // Reset player data
+        for (PlayerInfo player : playerInfoMap.values()) {
+            player.setScore(0);
+            player.setLevel(1);
+            player.setCombo(0);
+            player.setMoves(0);
+        }
+    }
+
+    private void broadcastMessage(String message) {
+        for (DataOutputStream out : clientOutputMap.values()) {
+            try {
+                out.writeByte('M'); // 'M' indicates message
+                out.writeUTF(message);
+                out.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     // 处理玩家的移动请求
     public void moveMerge(String dir, Socket clientSocket) throws SQLException {
         if (!isPlayerTurn(clientSocket)) {

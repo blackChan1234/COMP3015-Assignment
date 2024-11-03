@@ -16,6 +16,8 @@
 <VBox prefHeight="894.0" prefWidth="748.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1">
     <MenuBar fx:id="menuBar" VBox.vgrow="NEVER">
         <Menu mnemonicParsing="false" text="Game">
+            <MenuItem fx:id="mnuSavePuzzle" mnemonicParsing="false" text="Save Puzzle" />
+            <MenuItem fx:id="mnuUploadPuzzle" mnemonicParsing="false" text="Upload Puzzle" />
         </Menu>
         <Menu mnemonicParsing="false" text="Help">
             <MenuItem fx:id="mnuAbout" mnemonicParsing="false" text="About..." />

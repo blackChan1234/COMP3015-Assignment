@@ -1,4 +1,5 @@
 import javafx.application.Platform;
+import javafx.stage.FileChooser;
 
 import java.io.*;
 import java.net.Socket;
@@ -163,6 +164,7 @@ public class GameEngine {
         }
     }
 
+
     private List<PlayerInfo> receivePlayersInfo(DataInputStream in) throws IOException {
         int numPlayers = in.readInt();
         List<PlayerInfo> players = new ArrayList<>();
@@ -213,7 +215,28 @@ public class GameEngine {
         }
         return topScores;
     }
+    public int[] getBoardData() {
+        synchronized (board) {
+            return board.clone(); // Return a copy of the board data
+        }
+    }
+    public void sendPuzzleDataToServer(int[] boardData) throws IOException {
 
+
+        // Serialize the board data to a byte array
+        ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+        try (ObjectOutputStream objOut = new ObjectOutputStream(byteOut)) {
+            objOut.writeObject(boardData);
+        }
+        byte[] dataBytes = byteOut.toByteArray();
+        out.writeByte('U'); // 'U' indicates upload puzzle
+        System.out.println("Client: Data"+dataBytes.length);
+        // Send the length of the data and the data itself
+        out.writeInt(dataBytes.length);
+        out.write(dataBytes);
+        out.flush();
+        System.out.println("Client: Sent puzzle data to server.");
+    }
     public void moveMerge(String dir) throws IOException {
         if (!isMyTurn()) {
             // 提示玩家不是他的回合

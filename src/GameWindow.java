@@ -13,14 +13,19 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import org.json.*;
+
+
+
+
 
 public class GameWindow {
     @FXML
@@ -79,9 +84,13 @@ public class GameWindow {
     Label player3MoveCountLabel;
     @FXML
     Label moveCountLabel;
-
+    @FXML
+    MenuItem mnuSavePuzzle;
+    @FXML
+    MenuItem mnuUploadPuzzle;
     @FXML
     Pane boardPane;
+
 
     @FXML
     Canvas canvas;
@@ -115,9 +124,77 @@ public class GameWindow {
         stage.widthProperty().addListener(w -> onWidthChangedWindow(((ReadOnlyDoubleProperty) w).getValue()));
         stage.heightProperty().addListener(h -> onHeightChangedWindow(((ReadOnlyDoubleProperty) h).getValue()));
         stage.setOnCloseRequest(event -> quit());
-
+        initializeMenuHandlers();
         stage.show();
         initCanvas();
+    }
+    private void initializeMenuHandlers() {
+        mnuSavePuzzle.setOnAction(event -> savePuzzle());
+        mnuUploadPuzzle.setOnAction(event -> uploadPuzzle());
+    }
+    private void savePuzzle() {
+        Platform.runLater(() -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Save Puzzle");
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Puzzle Files", "*.json"));
+            File file = fileChooser.showSaveDialog(stage);
+            if (file != null) {
+                try {
+                    // Get the current puzzle data from the GameEngine
+                    int[] boardData = gameEngine.getBoardData();
+
+                    // Serialize the board data to JSON
+                    JSONArray jsonArray = new JSONArray();
+                    for (int value : boardData) {
+                        jsonArray.put(value);
+                    }
+
+                    // Write JSON to the file
+                    try (FileWriter writer = new FileWriter(file)) {
+                        writer.write(jsonArray.toString());
+                    }
+
+                    showMessage("Puzzle saved successfully.");
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    showMessage("Failed to save the puzzle.");
+                }
+            }
+        });
+    }
+
+    private void uploadPuzzle() {
+        Platform.runLater(() -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Upload Puzzle");
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Puzzle Files", "*.json"));
+            File file = fileChooser.showOpenDialog(stage);
+            if (file != null) {
+                try {
+                    // Read JSON from the file
+                    String content = new String(Files.readAllBytes(file.toPath()));
+                    JSONArray jsonArray = new JSONArray(content);
+
+                    // Convert JSON array to int[]
+                    int[] boardData = new int[jsonArray.length()];
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        boardData[i] = jsonArray.getInt(i);
+                    }
+
+                    // Send the puzzle data to the server
+                    gameEngine.sendPuzzleDataToServer(boardData);
+
+                    showMessage("Puzzle uploaded successfully.");
+
+                } catch (IOException | JSONException e) {
+                    e.printStackTrace();
+                    showMessage("Failed to upload the puzzle.");
+                }
+            }
+        });
     }
 
     public void showGameStart() {

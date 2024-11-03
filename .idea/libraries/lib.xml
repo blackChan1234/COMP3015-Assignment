@@ -3,6 +3,7 @@
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/BattleJoker/lib/slf4j-api-1.7.36.jar!/" />
       <root url="jar://$PROJECT_DIR$/BattleJoker/lib/sqlite-jdbc-3.45.2.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/json-20140107.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

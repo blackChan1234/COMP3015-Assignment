@@ -21,7 +21,7 @@
     <HBox spacing="10" layoutX="10.0" layoutY="420.0">
         <children>
             <Button fx:id="top10Button" text="Top 10" onAction="#handleTop10Button"/>
-            <Button fx:id="waitNewGameButton" text="Wait for New Game" onAction="#handleWaitNewGameButton"/>
+
         </children>
     </HBox>
 </VBox>

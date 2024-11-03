@@ -80,7 +80,7 @@ public class JokerServer {
                     // 处理前 10 名记录请求
                     sendTopScoresToClient(out);
                 } else {
-                    assignedRoom.handleClientData(data, clientSocket);
+                    assignedRoom.handleClientData(data, clientSocket,in);
                 }
             }
         } catch (IOException e) {
