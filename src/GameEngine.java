@@ -221,22 +221,21 @@ public class GameEngine {
         }
     }
     public void sendPuzzleDataToServer(int[] boardData) throws IOException {
+        out.writeByte('P'); // 'U' indicates upload puzzle
+        out.flush(); // Ensure the command byte is sent
 
+        // Send the length of the data (number of ints)
+        out.writeInt(boardData.length);
 
-        // Serialize the board data to a byte array
-        ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        try (ObjectOutputStream objOut = new ObjectOutputStream(byteOut)) {
-            objOut.writeObject(boardData);
+        // Send the int[] data directly
+        for (int value : boardData) {
+            out.writeInt(value);
         }
-        byte[] dataBytes = byteOut.toByteArray();
-        out.writeByte('U'); // 'U' indicates upload puzzle
-        System.out.println("Client: Data"+dataBytes.length);
-        // Send the length of the data and the data itself
-        out.writeInt(dataBytes.length);
-        out.write(dataBytes);
-        out.flush();
+        out.flush(); // Ensure all data is sent
         System.out.println("Client: Sent puzzle data to server.");
     }
+
+
     public void moveMerge(String dir) throws IOException {
         if (!isMyTurn()) {
             // 提示玩家不是他的回合

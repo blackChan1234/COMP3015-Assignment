@@ -188,24 +188,23 @@ public class GameRoom {
         if (!gameStarted) {
             if (data == 'S' && isFirstPlayer(clientSocket)) {
                 startGame(clientSocket);
-            } else if (data == 'U') {
-                // Allow uploading puzzle before game starts
-                receivePuzzleData(clientSocket, in);
             } else {
-                System.out.println("Received unexpected data before game started: " + data);
+                System.out.println("Received unexpected data before game started: '" + data + "'");
             }
         } else {
             if (actionMap.containsKey(String.valueOf(data))) {
                 moveMerge(String.valueOf(data), clientSocket);
                 updatePlayerDataAndBroadcast(clientSocket);
-            } else if (data == 'U') {
+            } else if (data == 'P') {
+                System.out.println("Received 'U' command from client.");
                 // Handle upload puzzle data
                 receivePuzzleData(clientSocket, in);
             } else {
-                System.out.println("Unknown command during game: " + data);
+                System.out.println("Unknown command during game: '" + data + "'");
             }
         }
     }
+
 
 
 

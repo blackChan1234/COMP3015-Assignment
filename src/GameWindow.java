@@ -21,10 +21,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
-import org.json.*;
-
-
-
 
 
 public class GameWindow {
@@ -137,22 +133,19 @@ public class GameWindow {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Puzzle");
             fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("Puzzle Files", "*.json"));
+                    new FileChooser.ExtensionFilter("Puzzle Files", "*.puzzle"));
             File file = fileChooser.showSaveDialog(stage);
             if (file != null) {
                 try {
                     // Get the current puzzle data from the GameEngine
                     int[] boardData = gameEngine.getBoardData();
 
-                    // Serialize the board data to JSON
-                    JSONArray jsonArray = new JSONArray();
-                    for (int value : boardData) {
-                        jsonArray.put(value);
-                    }
-
-                    // Write JSON to the file
-                    try (FileWriter writer = new FileWriter(file)) {
-                        writer.write(jsonArray.toString());
+                    // Save the board data to the file in binary format
+                    try (DataOutputStream out = new DataOutputStream(new FileOutputStream(file))) {
+                        out.writeInt(boardData.length);
+                        for (int value : boardData) {
+                            out.writeInt(value);
+                        }
                     }
 
                     showMessage("Puzzle saved successfully.");
@@ -165,37 +158,41 @@ public class GameWindow {
         });
     }
 
+
     private void uploadPuzzle() {
         Platform.runLater(() -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Upload Puzzle");
             fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("Puzzle Files", "*.json"));
+                    new FileChooser.ExtensionFilter("Puzzle Files", "*.puzzle"));
             File file = fileChooser.showOpenDialog(stage);
             if (file != null) {
                 try {
-                    // Read JSON from the file
-                    String content = new String(Files.readAllBytes(file.toPath()));
-                    JSONArray jsonArray = new JSONArray(content);
-
-                    // Convert JSON array to int[]
-                    int[] boardData = new int[jsonArray.length()];
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        boardData[i] = jsonArray.getInt(i);
+                    // Read the puzzle data from the file
+                    int[] boardData;
+                    try (DataInputStream in = new DataInputStream(new FileInputStream(file))) {
+                        int length = in.readInt();
+                        boardData = new int[length];
+                        System.out.println(boardData.length);
+                        for (int i = 0; i < length; i++) {
+                            boardData[i] = in.readInt();
+                        }
                     }
+                    System.out.println(boardData);
 
                     // Send the puzzle data to the server
                     gameEngine.sendPuzzleDataToServer(boardData);
 
                     showMessage("Puzzle uploaded successfully.");
 
-                } catch (IOException | JSONException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                     showMessage("Failed to upload the puzzle.");
                 }
             }
         });
     }
+
 
     public void showGameStart() {
         Platform.runLater(() -> {
