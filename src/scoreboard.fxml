@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="ScoreboardController">
+    <children>
+        <ListView fx:id="scoreListView" layoutX="14.0" layoutY="14.0" prefHeight="400.0" prefWidth="500.0"  />
+    </children>
+</AnchorPane>

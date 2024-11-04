@@ -1,15 +1,20 @@
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class JokerServer {
     private List<GameRoom> gameRooms = new ArrayList<>();
-
+    private static final String MULTICAST_IP = "230.0.0.0";
+    private static final int MULTICAST_PORT = 4446;
+    private ScheduledExecutorService multicastScheduler;
     public JokerServer(int port) throws IOException {
         ServerSocket srvSocket = new ServerSocket(port);
         System.out.println("Server started on port: " + port);
+        startMulticastScheduler();
         while (true) {
             Socket clientSocket = srvSocket.accept();
             System.out.println("Client connected: " + clientSocket.getInetAddress());
@@ -23,7 +28,42 @@ public class JokerServer {
             childThread.start();
         }
     }
+    private void startMulticastScheduler() {
+        multicastScheduler = Executors.newSingleThreadScheduledExecutor();
+        multicastScheduler.scheduleAtFixedRate(() -> {
+            try {
+                sendTopScoresMulticast();
+            } catch (IOException | SQLException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }, 0, 10, TimeUnit.SECONDS); // Adjust the interval as needed
+    }
 
+    private void sendTopScoresMulticast() throws IOException, SQLException, ClassNotFoundException {
+        ArrayList<HashMap<String, String>> topScores = Database.getScores();
+
+        // Serialize the top scores to a byte array
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (DataOutputStream dos = new DataOutputStream(baos)) {
+            dos.writeInt(topScores.size());
+            for (Map<String, String> scoreData : topScores) {
+                dos.writeUTF(scoreData.get("name"));
+                dos.writeInt(Integer.parseInt(scoreData.get("score")));
+                dos.writeInt(Integer.parseInt(scoreData.get("level")));
+                dos.writeUTF(scoreData.get("time"));
+            }
+        }
+
+        byte[] data = baos.toByteArray();
+
+        // Create a multicast socket
+        try (DatagramSocket socket = new DatagramSocket()) {
+            InetAddress group = InetAddress.getByName(MULTICAST_IP);
+            DatagramPacket packet = new DatagramPacket(data, data.length, group, MULTICAST_PORT);
+            socket.send(packet);
+            System.out.println("Server: Sent top scores via multicast.");
+        }
+    }
     public void serve(Socket clientSocket) throws IOException, SQLException {
 
         DataInputStream in = null;
