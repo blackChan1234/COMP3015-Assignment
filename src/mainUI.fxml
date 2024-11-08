@@ -18,6 +18,7 @@
         <Menu mnemonicParsing="false" text="Game">
             <MenuItem fx:id="mnuSavePuzzle" mnemonicParsing="false" text="Save Puzzle" />
             <MenuItem fx:id="mnuUploadPuzzle" mnemonicParsing="false" text="Upload Puzzle" />
+
         </Menu>
         <Menu mnemonicParsing="false" text="Help">
             <MenuItem fx:id="mnuAbout" mnemonicParsing="false" text="About..." />

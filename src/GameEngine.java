@@ -143,6 +143,8 @@ public class GameEngine {
         System.out.println("Client: Sent start game command.");
     }
 
+
+
     void receiveArray(DataInputStream in) throws IOException {
         synchronized (board) {
             int size = in.readInt();

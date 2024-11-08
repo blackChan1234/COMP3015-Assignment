@@ -11,12 +11,11 @@ public class GameRoom {
     private int currentPlayerIndex = 0;
     private int movesRemaining = 4;
     private boolean gameStarted = false;
-
-    private boolean waitingForStart = false;
-    // 游戏相关的变量
+    private boolean puzzleUploadedInGame = false;
     public static final int LIMIT = 14;
     public static final int SIZE = 4;
     final int[] board = new int[SIZE * SIZE];
+    private int[] previousBoardState = new int[SIZE * SIZE];
     Random random = new Random();
     private int combo;
     private int numOfTilesMoved;
@@ -25,6 +24,7 @@ public class GameRoom {
     private int level = 1;
     private int score;
     private final Map<String, Runnable> actionMap = new HashMap<>();
+
 
     public GameRoom() {
         actionMap.put("U", this::moveUp);
@@ -199,7 +199,7 @@ public class GameRoom {
                 System.out.println("Received 'U' command from client.");
                 // Handle upload puzzle data
                 receivePuzzleData(clientSocket, in);
-            } else {
+            }  else {
                 System.out.println("Unknown command during game: '" + data + "'");
             }
         }
@@ -210,6 +210,15 @@ public class GameRoom {
 
     private void receivePuzzleData(Socket clientSocket, DataInputStream in) {
         try {
+            if (puzzleUploadedInGame) {
+                // Send an error message to the client
+                DataOutputStream out = clientOutputMap.get(clientSocket);
+                out.writeByte('M'); // 'M' indicates message
+                out.writeUTF("Puzzle upload has already been used in this game.");
+                out.flush();
+                return;
+            }
+
             int length = in.readInt();
             System.out.println("Server: Receiving puzzle data of length " + length);
 
@@ -225,14 +234,24 @@ public class GameRoom {
                     System.arraycopy(newBoard, 0, board, 0, board.length);
                 }
 
-                // Optionally reset game state variables
+                // Reset game state variables
                 resetGameState();
+
+                // Set the puzzleUploadedInGame to true
+                puzzleUploadedInGame = true;
+
+                // Set the currentPlayerIndex to the uploader
+                currentPlayerIndex = players.indexOf(clientSocket);
+                movesRemaining = 4; // Reset movesRemaining
 
                 // Broadcast the updated board to all clients
                 sendGameStateToAll();
 
                 // Notify all players about the new puzzle
                 broadcastMessage("Puzzle updated by " + playerInfoMap.get(clientSocket).getName());
+
+                // Notify all players of the new current player
+                notifyCurrentPlayer();
 
                 System.out.println("Puzzle data uploaded by player " + playerInfoMap.get(clientSocket).getName());
             } else {
@@ -255,6 +274,7 @@ public class GameRoom {
         }
     }
 
+
     private boolean validateBoardData(int[] boardData) {
         if (boardData.length != SIZE * SIZE) {
             return false;
@@ -274,6 +294,7 @@ public class GameRoom {
         gameOver = false;
         level = 1;
         score = 0;
+        puzzleUploadedInGame = false;
         // Reset player data
         for (PlayerInfo player : playerInfoMap.values()) {
             player.setScore(0);
@@ -297,20 +318,21 @@ public class GameRoom {
     // 处理玩家的移动请求
     public void moveMerge(String dir, Socket clientSocket) throws SQLException {
         if (!isPlayerTurn(clientSocket)) {
-            // 非当前玩家的请求，忽略或返回错误
+            // Non-current player's request, ignore
             return;
         }
         synchronized (board) {
             if (actionMap.containsKey(dir)) {
+
                 combo = numOfTilesMoved = 0;
 
-                // 执行移动逻辑
+                // Execute move logic
                 actionMap.get(dir).run();
 
-                // 计算新的得分
+                // Calculate new score
                  score += combo / 5 * 2; // 如果有全局得分，可以在这里更新
 
-                // 判断游戏是否结束
+                // Check if game is over
                 if (numOfTilesMoved > 0) {
                     totalMoveCount++;
                     gameOver = level == LIMIT || !nextRound();
@@ -485,6 +507,8 @@ public class GameRoom {
             }
             if (i != j)
                 numOfTilesMoved++;
+
+
         }
     }
 

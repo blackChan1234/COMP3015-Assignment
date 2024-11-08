@@ -37,6 +37,7 @@ public class GameWindow {
     @FXML
     Label levelLabel;
 
+
     @FXML
     Label comboLabel;
     @FXML
@@ -54,6 +55,7 @@ public class GameWindow {
     Label player1MoveCountLabel;
     @FXML
     MenuItem mnuTopScores;
+
     @FXML
     VBox player2Box;
     @FXML
@@ -102,6 +104,7 @@ public class GameWindow {
     static final String[] symbols = {"bg", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker"};
     static final Image[] images = new Image[symbols.length];
     static final GameEngine gameEngine = GameEngine.getInstance();
+    private boolean puzzleUploadedInGame = false;
 
     public GameWindow(Stage stage) throws IOException {
         loadImages();
@@ -128,7 +131,11 @@ public class GameWindow {
     private void initializeMenuHandlers() {
         mnuSavePuzzle.setOnAction(event -> savePuzzle());
         mnuUploadPuzzle.setOnAction(event -> uploadPuzzle());
+
+
     }
+
+
     private void savePuzzle() {
         Platform.runLater(() -> {
             FileChooser fileChooser = new FileChooser();
@@ -161,6 +168,7 @@ public class GameWindow {
 
 
     private void uploadPuzzle() {
+
         Platform.runLater(() -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Upload Puzzle");
@@ -180,11 +188,15 @@ public class GameWindow {
                         }
                     }
                     System.out.println(boardData);
-
+                    if (puzzleUploadedInGame) {
+                        showMessage("Puzzle upload has already been used in this game.");
+                        return;
+                    }
                     // Send the puzzle data to the server
                     gameEngine.sendPuzzleDataToServer(boardData);
 
                     showMessage("Puzzle uploaded successfully.");
+                    puzzleUploadedInGame = true;
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -198,7 +210,8 @@ public class GameWindow {
     public void showGameStart() {
         Platform.runLater(() -> {
             gameStart();
-            // 可以在这里显示游戏开始的提示
+            puzzleUploadedInGame = false;
+
         });
     }
 
