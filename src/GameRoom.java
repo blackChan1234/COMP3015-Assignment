@@ -308,7 +308,7 @@ public class GameRoom {
                 actionMap.get(dir).run();
 
                 // 计算新的得分
-                int score = combo / 5 * 2; // 如果有全局得分，可以在这里更新
+                 score += combo / 5 * 2; // 如果有全局得分，可以在这里更新
 
                 // 判断游戏是否结束
                 if (numOfTilesMoved > 0) {
@@ -416,8 +416,17 @@ public class GameRoom {
             DataOutputStream out = clientOutputMap.get(s);
             try {
                 out.writeByte('S'); // 'S' indicates game over scores
-                out.writeInt(playerInfoMap.size());
-                for (PlayerInfo player : playerInfoMap.values()) {
+                // Convert the playerInfoMap values to a list
+                List<PlayerInfo> playerList = new ArrayList<>(playerInfoMap.values());
+
+                // Sort the list in descending order by score
+                playerList.sort((p1, p2) -> Integer.compare(p2.getScore(), p1.getScore()));
+
+                // Send the size of the list
+                out.writeInt(playerList.size());
+
+                // Iterate over the sorted list and send player data
+                for (PlayerInfo player : playerList) {
                     out.writeUTF(player.getName());
                     out.writeInt(player.getScore());
                     out.writeInt(player.getLevel());

@@ -13,6 +13,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -381,10 +382,12 @@ public class GameWindow {
         Platform.runLater(() -> {
             if (currentPlayerName.equals(nameLabel.getText())) {
                 turnIndicatorLabel.setText("Your Turn");
+                turnIndicatorLabel.setTextFill(Color.RED);
                 canvas.setDisable(false);
                 canvas.requestFocus();
             } else {
                 turnIndicatorLabel.setText("Waiting for " + currentPlayerName);
+                turnIndicatorLabel.setTextFill(Color.BLACK);
                 canvas.setDisable(true);
             }
         });
