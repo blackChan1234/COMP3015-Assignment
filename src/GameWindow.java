@@ -221,17 +221,17 @@ public class GameWindow {
 
     public void updateOtherPlayersData(List<PlayerInfo> players) {
         Platform.runLater(() -> {
-            String localPlayerName = nameLabel.getText();
+            String localPlayerId = gameEngine.getPlayerId();
 
-            // 隐藏其他玩家的 VBox
+            // hide other player VBOX
             player1Box.setVisible(false);
             player2Box.setVisible(false);
             player3Box.setVisible(false);
 
             int index = 0;
             for (PlayerInfo player : players) {
-                if (player.getName().equals(localPlayerName)) {
-                    // 更新本地玩家的信息
+                if (player.getPlayerId().equals(localPlayerId)) {
+                    // update local player info
                     scoreLabel.setText("Score: " + player.getScore());
                     levelLabel.setText("Level: " + player.getLevel());
                     comboLabel.setText("Combo: " + player.getCombo());
@@ -251,7 +251,7 @@ public class GameWindow {
                                     player3ComboLabel, player3MoveCountLabel, player);
                             break;
                         default:
-                            // 处理更多玩家
+                            // Handle more players
                             break;
                     }
                     index++;
@@ -292,7 +292,7 @@ public class GameWindow {
             }
         };
         canvas.setFocusTraversable(true);
-        canvas.setDisable(true); // 初始时禁用输入
+        canvas.setDisable(true);
         canvas.requestFocus();
     }
 
@@ -391,20 +391,31 @@ public class GameWindow {
         nameLabel.setText(name);
     }
 
-    public void updateCurrentPlayer(String currentPlayerName) {
+    public void updateCurrentPlayer(String currentPlayerId) {
         Platform.runLater(() -> {
-            if (currentPlayerName.equals(nameLabel.getText())) {
+            String localPlayerId = gameEngine.getPlayerId();
+            if (currentPlayerId.equals(localPlayerId)) {
                 turnIndicatorLabel.setText("Your Turn");
                 turnIndicatorLabel.setTextFill(Color.RED);
                 canvas.setDisable(false);
                 canvas.requestFocus();
             } else {
+                // Find the current player's name using the playerId
+                String currentPlayerName = "";
+                for (PlayerInfo player : gameEngine.getPlayers()) {
+                    if (player.getPlayerId().equals(currentPlayerId)) {
+                        currentPlayerName = player.getName();
+                        break;
+                    }
+                }
                 turnIndicatorLabel.setText("Waiting for " + currentPlayerName);
                 turnIndicatorLabel.setTextFill(Color.BLACK);
                 canvas.setDisable(true);
             }
         });
     }
+
+
 
     public void showMessage(String message) {
         Platform.runLater(() -> {
@@ -428,15 +439,15 @@ public class GameWindow {
                 lobbyStage.setTitle("Game Lobby");
                 lobbyStage.setScene(new Scene(root));
 
-                // 设置 lobbyStage
+                // set lobbyStage
                 lobbyController.setLobbyStage(lobbyStage);
 
-                // 设置 LobbyController 到 GameEngine
+                // set LobbyController to GameEngine
                 GameEngine.getInstance().setLobbyController(lobbyController);
 
                 lobbyStage.show();
 
-                // 通知 GameEngine，lobby 已经准备好，可以启动 receiverThread
+                // notify GameEngine，lobby is ready，can active receiverThread
                 GameEngine.getInstance().startReceiverThread();
 
             } catch (IOException e) {

@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
+import java.util.UUID;
 public class JokerServer {
     private List<GameRoom> gameRooms = new ArrayList<>();
     private static final String MULTICAST_IP = "230.0.0.0";
@@ -75,9 +75,13 @@ public class JokerServer {
             out = new DataOutputStream(clientSocket.getOutputStream());
 
             String playerName = in.readUTF();
-            PlayerInfo playerInfo = new PlayerInfo(playerName);
-            System.out.println("Server: Received player name from client: " + playerName);
-            // 将玩家加入游戏房间
+            String playerId = UUID.randomUUID().toString();
+            PlayerInfo playerInfo = new PlayerInfo(playerName,playerId);
+            System.out.println("Server: Received player name from client: " + playerName+ ", assigned ID: " + playerId);
+            out.writeByte('I');
+            out.writeUTF(playerId);
+            out.flush();
+
             assignedRoom = null;
             synchronized (gameRooms) {
                 // Find an available room
@@ -101,36 +105,29 @@ public class JokerServer {
                     return;
                 }
 
-//                if (assignedRoom.isFirstPlayer(clientSocket)) {
-//                    assignedRoom.promptFirstPlayerToStart();
-//                } else if (assignedRoom.isFull()) {
-//                    assignedRoom.startGame(null); // 达到 4 名玩家，自动开始游戏
-//                }
-//                assignedRoom.addPlayer(clientSocket, playerInfo, out);
-
                 // If the room is full, start the game
                 if (assignedRoom.PlayerisFull()) {
-                    assignedRoom.startGame(clientSocket); // 传递 clientSocket 而非 null
+                    assignedRoom.startGame(clientSocket); // send clientSocket not null
                 }
             }
 
             while (true) {
                 char data = (char) in.readByte();
                 if (data == 't') {
-                    // 处理前 10 名记录请求
+                    // handle request top 10 score
                     sendTopScoresToClient(out);
                 } else {
                     assignedRoom.handleClientData(data, clientSocket,in);
                 }
             }
         } catch (IOException e) {
-            // 客户端可能已断开连接
+            // client lost connect
             System.out.println("Client disconnected: " + clientSocket.getInetAddress());
             if (assignedRoom != null) {
                 assignedRoom.removePlayer(clientSocket);
             }
         } finally {
-            // 关闭资源
+            // close
             closeResource(in);
             closeResource(out);
             if (clientSocket != null && !clientSocket.isClosed()) clientSocket.close();
@@ -161,7 +158,7 @@ public class JokerServer {
     }
 
 
-    // 关闭 Closeable 资源的公共方法
+    // close Closeable
     private void closeResource(Closeable resource) {
         if (resource != null) {
             try {
@@ -172,7 +169,7 @@ public class JokerServer {
         }
     }
 
-    // 主方法
+
     public static void main(String[] args) throws IOException {
         new JokerServer(12345);
     }

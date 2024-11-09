@@ -12,23 +12,23 @@ public class GameEngine {
     final int[] board = new int[SIZE * SIZE];
     private boolean gameOver = false;
     private static GameEngine instance;
-
+    private String playerId;
     Socket clientSocket;
     DataOutputStream out;
     DataInputStream in;
-
+    List<PlayerInfo> players = new ArrayList<>();
     Thread receiverThread;
 
-    private String currentPlayerName;
     private String playerName;
     public LobbyController lobbyController;
 
-    private List<String> playerList = new ArrayList<>();
+    private List<PlayerInfo> playerList = new ArrayList<>();
+    private String currentPlayerId;
+
     public void setLobbyController(LobbyController lobbyController) {
         this.lobbyController = lobbyController;
     }
 
-    // 判断是否为第一位玩家
     public boolean isFirstPlayer() {
         return isFirstPlayer;
     }
@@ -62,8 +62,8 @@ public class GameEngine {
                     System.out.println("Client: Received data: " + (char)data);
                     switch (data) {
                         case 'L':
-                            // 接收玩家列表更新
-                            List<String> playerslist = receivePlayerList(in);
+                            // update the player list
+                            List<PlayerInfo> playerslist = receivePlayerList(in);
                             playerList = playerslist;
                             System.out.println(playerList);
                             System.out.println(lobbyController);
@@ -100,9 +100,9 @@ public class GameEngine {
                             Platform.runLater(() -> gameWindow.displayTopScores(topScores));
                             break;
                         case 'N':
-                            String currentPlayerName = in.readUTF();
-                            System.out.println("Client: Current player is " + currentPlayerName);
-                            updateCurrentPlayer(currentPlayerName);
+                            String currentPlayerId = in.readUTF();
+                            System.out.println("Client: Current player ID is " + currentPlayerId);
+                            updateCurrentPlayer(currentPlayerId);
                             break;
                         case 'G':
                             // Game start notification
@@ -111,8 +111,14 @@ public class GameEngine {
                             }
                             Platform.runLater(() -> gameWindow.showGameStart());
                             break;
+                        case 'I':
+                            // Receive player ID from server
+                            String playerId = in.readUTF();
+                            this.playerId = playerId;
+                            System.out.println("Client: Received player ID: " + playerId);
+                            break;
                         case 'M':
-                            // 消息提示
+                            // notify
                             String message = in.readUTF();
                             Platform.runLater(() -> gameWindow.showMessage(message));
                             break;
@@ -122,23 +128,29 @@ public class GameEngine {
                     }
                 }
             } catch (IOException ex) {
-                ex.printStackTrace(); // For debugging only
+                ex.printStackTrace();
             }
         });
         receiverThread.start();
     }
 
-    private List<String> receivePlayerList(DataInputStream in) throws IOException {
+    private List<PlayerInfo> receivePlayerList(DataInputStream in) throws IOException {
         int numPlayers = in.readInt();
-        List<String> players = new ArrayList<>();
+        List<PlayerInfo> players = new ArrayList<>();
         for (int i = 0; i < numPlayers; i++) {
             String name = in.readUTF();
-            players.add(name);
+            String playerId = in.readUTF();
+            PlayerInfo player = new PlayerInfo(name, playerId);
+            players.add(player);
         }
+        // Update the players list in GameEngine
+        this.players = players;
         return players;
     }
+
+
     public void sendStartGameCommand() throws IOException {
-        out.writeByte('S'); // 'S' 表示开始游戏
+        out.writeByte('S'); // 'S' mean game start
         out.flush();
         System.out.println("Client: Sent start game command.");
     }
@@ -169,27 +181,26 @@ public class GameEngine {
 
     private List<PlayerInfo> receivePlayersInfo(DataInputStream in) throws IOException {
         int numPlayers = in.readInt();
-        List<PlayerInfo> players = new ArrayList<>();
+        List<PlayerInfo> receivedPlayers = new ArrayList<>();
         for (int i = 0; i < numPlayers; i++) {
+            String playerId = in.readUTF();
             String name = in.readUTF();
             int score = in.readInt();
             int level = in.readInt();
             int combo = in.readInt();
             int moves = in.readInt();
-            PlayerInfo player = new PlayerInfo(name);
+            PlayerInfo player = new PlayerInfo(name, playerId);
             player.setScore(score);
             player.setLevel(level);
             player.setCombo(combo);
             player.setMoves(moves);
-            players.add(player);
+            receivedPlayers.add(player);
         }
-        return players;
+        // Update the players list
+        this.players = receivedPlayers;
+        return receivedPlayers;
     }
 
-    public void sendWaitCommand() throws IOException {
-        out.writeByte('W'); // 'W' 表示继续等待
-        out.flush();
-    }
 
     private List<PlayerInfo> receiveGameOverScores(DataInputStream in) throws IOException {
         int numPlayers = in.readInt();
@@ -217,6 +228,7 @@ public class GameEngine {
         }
         return topScores;
     }
+
     public int[] getBoardData() {
         synchronized (board) {
             return board.clone(); // Return a copy of the board data
@@ -252,15 +264,16 @@ public class GameEngine {
     }
 
     private boolean isMyTurn() {
-        return currentPlayerName != null && currentPlayerName.equals(playerName);
+        return currentPlayerId != null && currentPlayerId.equals(playerId);
     }
 
-    public void updateCurrentPlayer(String currentPlayerName) {
-        this.currentPlayerName = currentPlayerName;
+    public void updateCurrentPlayer(String currentPlayerId) {
+        this.currentPlayerId = currentPlayerId;
         if (gameWindow != null) {
-            gameWindow.updateCurrentPlayer(currentPlayerName);
+            gameWindow.updateCurrentPlayer(currentPlayerId);
         }
     }
+
 
     public int getValue(int r, int c) {
         synchronized (board) {
@@ -305,4 +318,13 @@ public class GameEngine {
             }
         }
     }
+
+    public String getPlayerId() {
+        return playerId;
+    }
+
+    public List<PlayerInfo> getPlayers() {
+        return players;
+    }
+
 }

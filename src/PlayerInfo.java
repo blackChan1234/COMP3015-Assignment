@@ -5,13 +5,14 @@ public class PlayerInfo {
     private int combo;
     private int moves;
     private static final long serialVersionUID = 1L;
-
-    public PlayerInfo(String name) {
+    private String playerId;
+    public PlayerInfo(String name,String playerId) {
         this.name = name;
         this.score = 0;
         this.level = 1;
         this.combo = 0;
         this.moves = 0;
+        this.playerId = playerId;
     }
 
     public PlayerInfo(String name, int score, int level) {
@@ -20,7 +21,7 @@ public class PlayerInfo {
         this.level = level;
     }
 
-    // Getter 和 Setter 方法
+
     public String getName() {
         return name;
     }
@@ -52,7 +53,9 @@ public class PlayerInfo {
     public void setCombo(int combo) {
         this.combo = combo;
     }
-
+    public String getPlayerId() {
+        return playerId;
+    }
 
     public int getMoves() {
         return moves;

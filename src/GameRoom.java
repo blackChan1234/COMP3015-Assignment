@@ -6,7 +6,7 @@ import java.util.*;
 public class GameRoom {
     private static final int MAX_PLAYERS = 4;
     private List<Socket> players = new ArrayList<>();
-    private Map<Socket, PlayerInfo> playerInfoMap = new HashMap<>();
+    private Map<String, PlayerInfo> playerInfoMap = new HashMap<>();
     private Map<Socket, DataOutputStream> clientOutputMap = new HashMap<>();
     private int currentPlayerIndex = 0;
     private int movesRemaining = 4;
@@ -24,6 +24,7 @@ public class GameRoom {
     private int level = 1;
     private int score;
     private final Map<String, Runnable> actionMap = new HashMap<>();
+    private Map<Socket, String> clientSocketIdMap = new HashMap<>();
 
 
     public GameRoom() {
@@ -34,15 +35,16 @@ public class GameRoom {
         nextRound();
     }
 
-    // 添加玩家到房间
+    // add player to room
     public boolean addPlayer(Socket clientSocket, PlayerInfo playerInfo, DataOutputStream out) {
         if (gameStarted) {
             // Game has already started, cannot join
             return false;
         }
         players.add(clientSocket);
-        playerInfoMap.put(clientSocket, playerInfo);
+        playerInfoMap.put(playerInfo.getPlayerId(), playerInfo);
         clientOutputMap.put(clientSocket, out);
+        clientSocketIdMap.put(clientSocket, playerInfo.getPlayerId());
         // Send whether the player is the first player
         try {
             out.writeByte('F'); // 'F' indicates first player notification
@@ -59,40 +61,39 @@ public class GameRoom {
     }
 
 
-    // 检查房间是否满员
+    // Check if the room is full
     public boolean PlayerisFull() {
         return players.size() >= MAX_PLAYERS;
     }
 
-    // 检查游戏是否已开始
+    // Check if the game has started
     public boolean isStarted() {
         return gameStarted;
     }
 
-    // 检查是否是第一个玩家
+    // Check if it is the first player
     public boolean isFirstPlayer(Socket clientSocket) {
         return players.get(0).equals(clientSocket);
     }
 
-    // 开始游戏
+    // start game
     public void startGame(Socket starterSocket) {
         if (players.size() < 2) {
-            // 玩家不足两人，无法开始游戏
             String message = "At least 2 players are required to start the game.";
             if (starterSocket != null) {
                 DataOutputStream out = clientOutputMap.get(starterSocket);
                 try {
-                    out.writeByte('M'); // 'M' 表示消息
+                    out.writeByte('M');
                     out.writeUTF(message);
                     out.flush();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } else {
-                // 通知所有玩家
+
                 for (DataOutputStream out : clientOutputMap.values()) {
                     try {
-                        out.writeByte('M'); // 'M' 表示消息
+                        out.writeByte('M');
                         out.writeUTF(message);
                         out.flush();
                     } catch (IOException e) {
@@ -112,39 +113,41 @@ public class GameRoom {
         while (iterator.hasNext()) {
             Socket s = iterator.next();
             if (s.isClosed() || !s.isConnected()) {
-                // 移除已断开的客户端
+                // Remove disconnected client
                 iterator.remove();
                 clientOutputMap.remove(s);
-                playerInfoMap.remove(s);
+                clientSocketIdMap.remove(s);
                 continue;
             }
             DataOutputStream out = clientOutputMap.get(s);
+            String playerId = null;
             try {
-                out.writeByte('L'); // 'L' 表示玩家列表
+                out.writeByte('L'); // 'L' indicates player list
                 out.writeInt(players.size());
                 for (Socket playerSocket : players) {
-                    PlayerInfo playerInfo = playerInfoMap.get(playerSocket);
+                    playerId = clientSocketIdMap.get(playerSocket);
+                    PlayerInfo playerInfo = playerInfoMap.get(playerId);
                     out.writeUTF(playerInfo.getName());
+                    out.writeUTF(playerId);
                 }
                 out.flush();
             } catch (IOException e) {
                 e.printStackTrace();
-                // 如果写入失败，可能是客户端已断开，移除该客户端
+                // If write fails, client might be disconnected, remove client
                 iterator.remove();
                 clientOutputMap.remove(s);
-                playerInfoMap.remove(s);
+                clientSocketIdMap.remove(s);
+                playerInfoMap.remove(playerId);
             }
         }
     }
 
 
-
-    // 通知所有玩家游戏开始
     private void notifyAllPlayersGameStart() {
         for (Socket s : players) {
             DataOutputStream out = clientOutputMap.get(s);
             try {
-                out.writeByte('G'); // 'G' 表示游戏开始
+                out.writeByte('G'); // 'G' mean game start
                 out.flush();
                 sendGameStateToAll();
                 System.out.println("Notifying all players that the game has started.");
@@ -152,12 +155,13 @@ public class GameRoom {
                 e.printStackTrace();
             }
         }
-        // 通知当前玩家可以行动
         notifyCurrentPlayer();
     }
     private void updatePlayerDataAndBroadcast(Socket clientSocket) {
         // Update the player's data
-        PlayerInfo playerInfo = playerInfoMap.get(clientSocket);
+        String playerId = clientSocketIdMap.get(clientSocket);
+        PlayerInfo playerInfo = playerInfoMap.get(playerId);
+
         if (playerInfo != null) {
             playerInfo.setScore(score);
             playerInfo.setLevel(level);
@@ -168,21 +172,26 @@ public class GameRoom {
         // Send updated game state to all clients
         sendGameStateToAll();
     }
-    // 通知当前玩家
+
     private void notifyCurrentPlayer() {
-        String currentPlayerName = playerInfoMap.get(players.get(currentPlayerIndex)).getName();
-        System.out.println("Notifying players that current player is: " + currentPlayerName);
+        Socket currentPlayerSocket = players.get(currentPlayerIndex);
+        String currentPlayerId = clientSocketIdMap.get(currentPlayerSocket);
+        PlayerInfo currentPlayerInfo = playerInfoMap.get(currentPlayerId);
+        String currentPlayerName = currentPlayerInfo.getName();
+        System.out.println("Notifying players that current player is: " + currentPlayerName + " (ID: " + currentPlayerId + ")");
         for (Socket s : players) {
             DataOutputStream out = clientOutputMap.get(s);
             try {
-                out.writeByte('N'); // 'N' 表示通知当前玩家
-                out.writeUTF(currentPlayerName);
+                out.writeByte('N'); // 'N' indicates notify current player
+                out.writeUTF(currentPlayerId); // Send playerId instead of name
                 out.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
+
 
     public void handleClientData(char data, Socket clientSocket, DataInputStream in) throws SQLException {
         if (!gameStarted) {
@@ -212,10 +221,7 @@ public class GameRoom {
         try {
             if (puzzleUploadedInGame) {
                 // Send an error message to the client
-                DataOutputStream out = clientOutputMap.get(clientSocket);
-                out.writeByte('M'); // 'M' indicates message
-                out.writeUTF("Puzzle upload has already been used in this game.");
-                out.flush();
+                sendMessageToClient(clientSocket, "Puzzle upload has already been used in this game.");
                 return;
             }
 
@@ -247,30 +253,25 @@ public class GameRoom {
                 // Broadcast the updated board to all clients
                 sendGameStateToAll();
 
+                // Get the player's info using playerId
+                String playerId = clientSocketIdMap.get(clientSocket);
+                PlayerInfo playerInfo = playerInfoMap.get(playerId);
+
                 // Notify all players about the new puzzle
-                broadcastMessage("Puzzle updated by " + playerInfoMap.get(clientSocket).getName());
+                broadcastMessage("Puzzle updated by " + playerInfo.getName());
 
                 // Notify all players of the new current player
                 notifyCurrentPlayer();
 
-                System.out.println("Puzzle data uploaded by player " + playerInfoMap.get(clientSocket).getName());
+                System.out.println("Puzzle data uploaded by player " + playerInfo.getName());
             } else {
                 // Send an error message to the client
-                DataOutputStream out = clientOutputMap.get(clientSocket);
-                out.writeByte('M'); // 'M' indicates message
-                out.writeUTF("Invalid puzzle data uploaded.");
-                out.flush();
+
+                sendMessageToClient(clientSocket, "Invalid puzzle data uploaded.");
             }
         } catch (IOException e) {
             e.printStackTrace();
-            try {
-                DataOutputStream out = clientOutputMap.get(clientSocket);
-                out.writeByte('M');
-                out.writeUTF("Error processing uploaded puzzle data.");
-                out.flush();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+            sendMessageToClient(clientSocket, "Error processing uploaded puzzle data.");
         }
     }
 
@@ -315,7 +316,7 @@ public class GameRoom {
             }
         }
     }
-    // 处理玩家的移动请求
+    // handle move
     public void moveMerge(String dir, Socket clientSocket) throws SQLException {
         if (!isPlayerTurn(clientSocket)) {
             // Non-current player's request, ignore
@@ -330,7 +331,7 @@ public class GameRoom {
                 actionMap.get(dir).run();
 
                 // Calculate new score
-                 score += combo / 5 * 2; // 如果有全局得分，可以在这里更新
+                 score += combo / 5 * 2;
 
                 // Check if game is over
                 if (numOfTilesMoved > 0) {
@@ -341,9 +342,9 @@ public class GameRoom {
 
                 movesRemaining--;
                 if (movesRemaining == 0) {
-                    // 重置移动次数
+                    // reset move
                     movesRemaining = 4;
-                    // 切换到下一个玩家
+                    // exchange to next player
                     currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
                     notifyCurrentPlayer();
                 }
@@ -357,12 +358,11 @@ public class GameRoom {
         }
     }
 
-    // 检查是否是当前玩家的回合
     private boolean isPlayerTurn(Socket clientSocket) {
         return players.get(currentPlayerIndex).equals(clientSocket);
     }
 
-    // 向所有玩家发送游戏状态
+    // send the game state to all player
     private void sendGameStateToAll() {
         for (Socket s : players) {
             DataOutputStream outClient = clientOutputMap.get(s);
@@ -375,7 +375,7 @@ public class GameRoom {
         }
     }
 
-    // 发送棋盘数组
+    // send  board
     void sendArray(DataOutputStream outClient) throws IOException {
         outClient.writeByte('A');
         outClient.writeInt(board.length);
@@ -385,12 +385,13 @@ public class GameRoom {
         outClient.flush();
     }
 
-    // 发送玩家信息
+    // send player Info
     private void sendPlayersInfo(DataOutputStream out) throws IOException {
         out.writeByte('P');
         synchronized (playerInfoMap) {
             out.writeInt(playerInfoMap.size());
             for (PlayerInfo playerInfo : playerInfoMap.values()) {
+                out.writeUTF(playerInfo.getPlayerId());
                 out.writeUTF(playerInfo.getName());
                 out.writeInt(playerInfo.getScore());
                 out.writeInt(playerInfo.getLevel());
@@ -400,15 +401,26 @@ public class GameRoom {
         }
         out.flush();
     }
+    private void sendMessageToClient(Socket clientSocket, String message) {
+        DataOutputStream out = clientOutputMap.get(clientSocket);
+        if (out != null) {
+            try {
+                out.writeByte('M'); // 'M' indicates a message
+                out.writeUTF(message);
+                out.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
-    // 游戏结束处理
+    // game over
     public synchronized void checkGameOver() throws SQLException {
         if (gameOver) {
             System.out.println("Game over. Sending scores to clients.");
-            // 找到胜利者
             PlayerInfo winner = getWinner();
 
-            // 记录胜利者的得分到数据库
+            // save the winner score to the database
             try {
 
                 Database.putScore(winner.getName(), winner.getScore(), winner.getLevel());
@@ -416,7 +428,7 @@ public class GameRoom {
                 ex.printStackTrace();
             }
 
-            // 发送所有玩家得分给客户端
+
             sendGameOverScores();
         }
     }
@@ -460,7 +472,7 @@ public class GameRoom {
         }
     }
 
-    // 游戏逻辑方法
+    // game logic
     private void moveDown() {
         for (int i = 0; i < SIZE; i++)
             moveMerge(SIZE, SIZE * (SIZE - 1) + i, i);
@@ -515,13 +527,11 @@ public class GameRoom {
     private boolean nextRound() {
         if (isFull()) return false;
         int i;
-
-        // 随机找到一个空位
         do {
             i = random.nextInt(SIZE * SIZE);
         } while (board[i] > 0);
 
-        // 随机生成一个牌并放入空位
+
         board[i] = random.nextInt(level) / 4 + 1;
         return true;
     }
@@ -532,7 +542,6 @@ public class GameRoom {
         return true;
     }
 
-    // 获取得分等信息
     public int getScore() {
         return score;
     }
@@ -549,7 +558,7 @@ public class GameRoom {
         return totalMoveCount;
     }
 
-    // 关闭房间内所有资源
+
     public void close() {
         for (Socket s : players) {
             try {
@@ -563,11 +572,11 @@ public class GameRoom {
     }
 
     public void removePlayer(Socket clientSocket) {
+        String playerId = clientSocketIdMap.get(clientSocket);
         players.remove(clientSocket);
         clientOutputMap.remove(clientSocket);
-        playerInfoMap.remove(clientSocket);
-
-        // 通知其他玩家更新列表
+        playerInfoMap.remove(playerId);
+        clientSocketIdMap.remove(clientSocket);
         sendPlayerListToAll();
     }
 }

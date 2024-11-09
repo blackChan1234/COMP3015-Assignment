@@ -26,7 +26,7 @@ public class LobbyController {
         gameEngine = GameEngine.getInstance();
         gameEngine.setLobbyController(this);
 
-        // 如果当前玩家是第一位玩家，显示开始游戏按钮
+        // if current player is the first player show the start game button
         if (gameEngine.isFirstPlayer()) {
             startGameButton.setVisible(true);
         }
@@ -54,10 +54,13 @@ public class LobbyController {
         }
     }
 
-    // 更新玩家列表
-    public void updatePlayerList(List<String> players) {
+    // update player list
+    public void updatePlayerList(List<PlayerInfo> playersList) {
         Platform.runLater(() -> {
-            playerListView.getItems().setAll(players);
+            playerListView.getItems().clear();
+            for (PlayerInfo player : playersList) {
+                playerListView.getItems().add(player.getName());
+            }
         });
     }
 
